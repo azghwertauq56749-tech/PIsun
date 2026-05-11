@@ -1,8 +1,11 @@
 import asyncio
 import logging
 import sqlite3
+import os
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+
+# Импортируем твои модули (те, что у тебя есть)
 from config import BOT_TOKEN
 from handlers import start, catalog, cart, casino, support, payment, admin
 
@@ -10,12 +13,11 @@ from handlers import start, catalog, cart, casino, support, payment, admin
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-def init_db():
-    """Создает все необходимые таблицы, чтобы не было ошибок 'no such table'"""
+# --- ИСПРАВЛЕНИЕ БАЗЫ ДАННЫХ ---
+def fix_database():
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
-    
-    # Таблица пользователей
+    # Создаем таблицу пользователей принудительно
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -24,50 +26,18 @@ def init_db():
             balance REAL DEFAULT 0.0
         )
     """)
-    
-    # Таблица категорий (для каталога)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL
-        )
-    """)
-    
-    # Таблица товаров
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category_id INTEGER,
-            name TEXT,
-            description TEXT,
-            price REAL,
-            photo_id TEXT,
-            FOREIGN KEY(category_id) REFERENCES categories(id)
-        )
-    """)
-    
-    # Таблица корзины
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS cart (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            item_id INTEGER,
-            quantity INTEGER DEFAULT 1
-        )
-    """)
-    
     conn.commit()
     conn.close()
-    logger.info("✅ База данных проверена и готова!")
+    logger.info("✅ Таблица users проверена!")
 
 async def main():
-    # Запускаем создание базы
-    init_db()
+    # Запускаем исправление перед включением бота
+    fix_database()
 
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
 
-    # Подключаем все роутеры
+    # Подключаем твои разделы
     dp.include_router(start.router)
     dp.include_router(catalog.router)
     dp.include_router(cart.router)
@@ -76,13 +46,13 @@ async def main():
     dp.include_router(payment.router)
     dp.include_router(admin.router)
 
-    # Чистим очередь обновлений, чтобы не было ошибок Conflict
+    # Удаляем старые сообщения (чтобы не было ошибки Conflict)
     await bot.delete_webhook(drop_pending_updates=True)
     
-    logger.info("🚀 Бот запущен и готов к работе!")
+    logger.info("🚀 Бот запущен!")
     
     try:
-        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+        await dp.start_polling(bot)
     finally:
         await bot.session.close()
 
