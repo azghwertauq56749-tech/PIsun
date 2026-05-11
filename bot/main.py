@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sqlite3  # <--- ДОБАВИЛИ ЭТО
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from config import BOT_TOKEN
@@ -9,6 +10,20 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 async def main():
+    # --- ЭТОТ БЛОК СОЗДАСТ ТАБЛИЦУ ПРИНУДИТЕЛЬНО ---
+    conn = sqlite3.connect("database.db")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            full_name TEXT,
+            balance REAL DEFAULT 0.0
+        )
+    """)
+    conn.commit()
+    conn.close()
+    # ----------------------------------------------
+
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
 
