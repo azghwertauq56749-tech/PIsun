@@ -1,7 +1,7 @@
 import os
 
 # ===== НАСТРОЙКИ =====
-BOT_TOKEN = os.getenv("8784795113:AAFtU3lhu1GrNSd8ONGMBjDLgSRbbwHSOzs")
+BOT_TOKEN = "8784795113:AAFtU3lhu1GrNSd8ONGMBjDLgSRbbwHSOzs"
 
 ADMIN_IDS = [1368176882, 6553155003]
 
