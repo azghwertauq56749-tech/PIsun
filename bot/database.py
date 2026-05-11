@@ -2,7 +2,8 @@ import sqlite3
 import os
 from datetime import datetime
 
-DB_PATH = "bot_data.db"
+# МЫ ОСТАВЛЯЕМ ОДНО ИМЯ БАЗЫ ДЛЯ ВСЕХ ФАЙЛОВ
+DB_PATH = "database.db"
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
@@ -13,6 +14,7 @@ def init_db():
     conn = get_conn()
     c = conn.cursor()
 
+    # Создаем таблицу пользователей
     c.execute("""CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY,
         username TEXT,
@@ -24,6 +26,7 @@ def init_db():
         registered_at TEXT
     )""")
 
+    # Создаем таблицу заказов
     c.execute("""CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
@@ -42,6 +45,7 @@ def init_db():
         updated_at TEXT
     )""")
 
+    # Таблица логов оплаты
     c.execute("""CREATE TABLE IF NOT EXISTS payment_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         order_id INTEGER,
@@ -54,6 +58,7 @@ def init_db():
         status TEXT DEFAULT 'pending'
     )""")
 
+    # Таблица казино
     c.execute("""CREATE TABLE IF NOT EXISTS casino_plays (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
@@ -66,7 +71,10 @@ def init_db():
     conn.commit()
     conn.close()
 
-# --- USER ---
+# ЭТА СТРОЧКА ВАЖНА: ОНА СОЗДАЕТ ТАБЛИЦЫ СРАЗУ
+init_db()
+
+# --- ОСТАЛЬНЫЕ ФУНКЦИИ (USER, ORDERS и т.д.) ---
 def get_user(user_id: int):
     conn = get_conn()
     row = conn.execute("SELECT * FROM users WHERE user_id=?", (user_id,)).fetchone()
@@ -109,7 +117,6 @@ def get_top_users(limit=10):
     conn.close()
     return rows
 
-# --- ORDERS ---
 def create_order(user_id, bot_type, description, price_uah, currency, unique_kopecks, unique_kopecks2):
     conn = get_conn()
     now = datetime.now().isoformat()
@@ -161,7 +168,6 @@ def confirm_finalpay(order_id):
         "UPDATE orders SET finalpay_confirmed=1, status='completed', updated_at=? WHERE id=?",
         (datetime.now().isoformat(), order_id)
     )
-    # +1 к заказам пользователя
     row = conn.execute("SELECT user_id FROM orders WHERE id=?", (order_id,)).fetchone()
     if row:
         conn.execute("UPDATE users SET total_orders=total_orders+1 WHERE user_id=?", (row["user_id"],))
@@ -183,7 +189,6 @@ def cancel_order(order_id):
     conn.commit()
     conn.close()
 
-# --- PAYMENT LOGS ---
 def log_payment(order_id, user_id, pay_type, amount, currency):
     conn = get_conn()
     conn.execute(
@@ -193,7 +198,6 @@ def log_payment(order_id, user_id, pay_type, amount, currency):
     conn.commit()
     conn.close()
 
-# --- CASINO ---
 def log_casino(user_id, bet, result, prize):
     conn = get_conn()
     conn.execute(
